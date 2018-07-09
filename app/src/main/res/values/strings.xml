@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">BluetoothLEProject</string>
+
+    <string name="not_require_bluetooth_le_feature">블루투스 LE 기술을 지원하지 않습니다.</string>
+</resources>
