@@ -16,6 +16,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView bleStateTextview;
     private Button bleOnButton;
     private Button bleSearchButton;
+    private Button bleSendButton;
     private boolean flagScanning;
 
     @Override
@@ -65,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
         bleOnButton = (Button) findViewById(R.id.ble_on);
         bleSearchButton = (Button) findViewById(R.id.ble_search);
         bleStateTextview = (TextView) findViewById(R.id.main_ble_state_textview);
+        bleSendButton = (Button) findViewById(R.id.ble_send);
         flagScanning = false;
         setEvent();
     }
@@ -98,6 +100,19 @@ public class MainActivity extends AppCompatActivity {
                         flagScanning = false;
                         bleSearchButton.setText("블루투스 검색");
                     }
+                }
+            }
+        });
+
+        bleSendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(bleHandler.getmGatt()== null){
+                    Toast.makeText(getApplicationContext(),
+                            "BLE 검색을 먼저 시작해주세요.",
+                            Toast.LENGTH_SHORT).show();
+                }else{
+                    bleHandler.sendDateToBLE("HELLO");
                 }
             }
         });
