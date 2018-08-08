@@ -26,7 +26,11 @@ import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.hch.hooney.bluetoothleproject.MainActivity;
 import com.hch.hooney.bluetoothleproject.R;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,14 +40,16 @@ public class BluetoothLEHandler {
     private final String TAG = "BLE HANDLER... ";
     private final int REQUEST_ENABLE = 103;
     private final long SCAN_PERIOD = 10000;
-    private final UUID MY_AVA_SERVER_UUID = UUID.fromString("ffffffff-ffff-ffff-ffff-fffffffffff0");
-    private final UUID MY_AVA_IP_CHARACTER_UUID = UUID.fromString("ffffffff-ffff-ffff-ffff-fffffffffff1");
-    private final UUID MY_AVA_GET_IP_DESCRIPTOR_UUID = UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffff01");
-    private final UUID MY_AVA_GET_IP_DESCRIPTOR_BYTE_UUID = UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffff02");
+    private UUID MY_AVA_SERVER_UUID = UUID.fromString("ffffffff-ffff-ffff-ffff-000000000000");
+    private UUID MY_AVA_AUTH_CHARACTER_UUID = UUID.fromString("ffffffff-ffff-ffff-ffff-100000000000");
+    private UUID MY_AVA_WIFI_CHARACTER_UUID = UUID.fromString("ffffffff-ffff-ffff-ffff-200000000000");
+    private UUID MY_AVA_AUTH_DESCRIPTOR_UUID = UUID.fromString("ffffffff-ffff-ffff-ffff-1f1000000000");
+    private UUID MY_AVA_WIFI_DESCRIPTOR_UUID = UUID.fromString("ffffffff-ffff-ffff-ffff-2f1000000000");
 
     private Handler mHandler;
     private Activity runningActivity;
     private int BLU_STATE;
+    private String AVA_MAC_ADDRESS;
 
     private BluetoothManager bthM;
     private BluetoothAdapter bthA;
@@ -51,7 +57,8 @@ public class BluetoothLEHandler {
     private ScanSettings settings;
     private List<ScanFilter> filters;
     private BluetoothGatt mGatt;
-    private BluetoothGattCharacteristic mCharacter;
+    private BluetoothGattCharacteristic mAuthCharacter;
+    private BluetoothGattCharacteristic mWifiCharacter;
 
     public BluetoothLEHandler(Activity nowActivity){
         this.runningActivity = nowActivity;
@@ -116,20 +123,16 @@ public class BluetoothLEHandler {
     private ScanCallback mScanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
-            Log.i("callbackType", String.valueOf(callbackType));
             Log.i("result", result.toString());
             BluetoothDevice btDevice = result.getDevice();
-
-            Log.i("Name", "Device : " + btDevice.getName());
-
-            if(btDevice.getName() != null){
-                if(btDevice.getName().contains("AVA")){
-                    connectToDevice(btDevice);
-                }
+            if(result.toString().contains(MY_AVA_SERVER_UUID.toString()) &&
+                    btDevice.getName().equals("AVA_raspberry_model")){
+                Log.i(TAG, "Device : " + btDevice.getName());
+                Log.i(TAG, "MAC : " + btDevice.getAddress());
+                AVA_MAC_ADDRESS = btDevice.getAddress();
+                connectToDevice(btDevice);
             }
-
         }
-
         @Override
         public void onBatchScanResults(List<ScanResult> results) {
             for (ScanResult sr : results) {
@@ -161,15 +164,24 @@ public class BluetoothLEHandler {
 
         }
 
+
+
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             BluetoothGattService service = gatt.getService(MY_AVA_SERVER_UUID);
+            MY_AVA_SERVER_UUID = service.getUuid();
             if(service == null){
                 Log.d(TAG, "SERVICE UUID : "+ MY_AVA_SERVER_UUID);
                 Log.d(TAG, "Can't Discover...");
             }else{
-                mCharacter = service.getCharacteristic(MY_AVA_IP_CHARACTER_UUID);
-                gatt.readCharacteristic(mCharacter);
+                mLEScanner.stopScan(mScanCallback);
+
+                mAuthCharacter = service.getCharacteristic(MY_AVA_AUTH_CHARACTER_UUID);
+                mWifiCharacter = service.getCharacteristic(MY_AVA_WIFI_CHARACTER_UUID);
+
+//                gatt.readCharacteristic(mAuthCharacter);
+                gatt.readCharacteristic(mWifiCharacter);
+                ((MainActivity)runningActivity).displayPrepareSendValue();
             }
         }
 
@@ -178,7 +190,7 @@ public class BluetoothLEHandler {
                                          BluetoothGattCharacteristic
                                                  characteristic, int status) {
             Log.i("onCharacteristicRead", characteristic.toString());
-            readCharacteristic(gatt, characteristic);
+            readCharacteristic(characteristic);
         }
 
         @Override
@@ -187,15 +199,17 @@ public class BluetoothLEHandler {
             super.onCharacteristicWrite(gatt, characteristic, status);
 
             Log.d(TAG, "Write...");
-            gatt.writeCharacteristic(characteristic);
-
+            if((status == BluetoothGatt.GATT_SUCCESS)){
+                gatt.readCharacteristic(characteristic);
+                prepareMac(characteristic);
+            }
         }
 
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
 
-            Log.d(TAG, "OnCharacterChange");
+            Log.d(TAG, "onChangedCharacter");
         }
 
         @Override
@@ -208,9 +222,14 @@ public class BluetoothLEHandler {
             }else{
                 Log.d(TAG, "Response : " + read);
             }
-
         }
+
+
     };
+
+    private void prepareMac(BluetoothGattCharacteristic characteristic){
+        ((MainActivity)runningActivity).displayReadValue(characteristic.getStringValue(0));
+    }
 
     private String byteToString(byte[] input){
         if(input != null && input.length > 0){
@@ -231,20 +250,18 @@ public class BluetoothLEHandler {
         return null;
     }
 
-    private void readCharacteristic(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic){
-        Log.d(TAG, "BLE Character [ DOMAIN ] : " + characteristic.getStringValue(0));
+    private void readCharacteristic( BluetoothGattCharacteristic characteristic){
+        Log.d(TAG, "BLE Character : " + characteristic.getStringValue(0));
 
-        Log.d(TAG, "BLE Descriptor.. ");
-
-        gatt.readDescriptor(characteristic.getDescriptor(MY_AVA_GET_IP_DESCRIPTOR_UUID));
-
+//        ((MainActivity)runningActivity).displayReadValue();
     }
 
     public boolean sendDateToBLE(String msg){
         if(msg != null){
-            if(mCharacter != null){
-                mCharacter.setValue(msg.getBytes());
-                mGatt.writeCharacteristic(mCharacter);
+            if(mWifiCharacter != null){
+                mWifiCharacter.setValue(msg.getBytes());
+                mWifiCharacter.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+                mGatt.writeCharacteristic(mWifiCharacter);
             }else{
                 Log.e(TAG, "It isn't Connected BLE Server...");
             }
@@ -342,8 +359,6 @@ public class BluetoothLEHandler {
                     } else {
                         mLEScanner.stopScan(mScanCallback);
                     }
-//                    mScanning = false;
-//                    bthA.stopLeScan(mLeScanCallback);
                 }
             }, SCAN_PERIOD);
             if (Build.VERSION.SDK_INT < 21) {

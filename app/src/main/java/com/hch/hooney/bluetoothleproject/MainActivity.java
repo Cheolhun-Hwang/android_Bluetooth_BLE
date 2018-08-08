@@ -4,10 +4,14 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.hch.hooney.bluetoothleproject.App.Application;
 import com.hch.hooney.bluetoothleproject.BluetoothLE.BluetoothLEHandler;
+
+import static com.hch.hooney.bluetoothleproject.App.Application.*;
 
 public class MainActivity extends AppCompatActivity {
     private final String TAG = "MainActivity";
@@ -18,6 +22,8 @@ public class MainActivity extends AppCompatActivity {
     private Button bleSearchButton;
     private Button bleSendButton;
     private boolean flagScanning;
+    private TextView bleReadValue;
+    private EditText bleSendValue;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,12 +58,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        bleHandler.pause();
+//        bleHandler.pause();
     }
 
     @Override
     protected void onStop() {
-        bleHandler.stop();
+//        bleHandler.stop();
         super.onStop();
     }
 
@@ -68,6 +74,8 @@ public class MainActivity extends AppCompatActivity {
         bleStateTextview = (TextView) findViewById(R.id.main_ble_state_textview);
         bleSendButton = (Button) findViewById(R.id.ble_send);
         flagScanning = false;
+        bleSendValue = (EditText) findViewById(R.id.main_ble_send_value);
+        bleReadValue = (TextView) findViewById(R.id.main_ble_get_value);
         setEvent();
     }
 
@@ -112,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
                             "BLE 검색을 먼저 시작해주세요.",
                             Toast.LENGTH_SHORT).show();
                 }else{
-                    bleHandler.sendDateToBLE("HELLO");
+                    bleHandler.sendDateToBLE(bleSendValue.getText().toString());
                 }
             }
         });
@@ -128,5 +136,25 @@ public class MainActivity extends AppCompatActivity {
         }else{
             bleStateTextview.setVisibility(View.VISIBLE);
         }
+    }
+
+    public void displayPrepareSendValue(){
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                bleReadValue.setVisibility(View.VISIBLE);
+                bleSendValue.setVisibility(View.VISIBLE);
+            }
+        });
+    }
+
+    public void displayReadValue(final String res){
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                String before = bleReadValue.getText().toString();
+                bleReadValue.setText(before+"\n"+res);
+            }
+        });
     }
 }

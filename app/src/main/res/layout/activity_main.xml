@@ -43,6 +43,7 @@
             android:textStyle="bold" />
     </LinearLayout>
     <LinearLayout
+        android:orientation="vertical"
         android:layout_weight="1"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -55,6 +56,25 @@
             android:paddingTop="17.5sp"
             android:text="현재 블루투스가 실행된 상태가 아닙니다."
             android:textStyle="bold|italic" />
+        <EditText
+            android:visibility="gone"
+            android:id="@+id/main_ble_send_value"
+            android:hint="보낼 value"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+            <TextView
+                android:scrollbars="vertical"
+                android:visibility="gone"
+                android:id="@+id/main_ble_get_value"
+                android:gravity="left|top"
+                android:paddingTop="17.5sp"
+                android:textStyle="bold"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </ScrollView>
     </LinearLayout>
 
 </LinearLayout>
